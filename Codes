@@ -1,0 +1,486 @@
+# Customer Churn in Wiretel
+# Exploratory Data Analysis (EDA)
+
+### The data set contains 20 predictors worth of information about 3333 customers of Wiretel, along with the target variable, churn, an indication of whether that customer churned (left the company) or not. 
+
+#import the required libraries
+import numpy as np
+import pandas as pd
+import pandas_profiling
+import seaborn as sns
+import matplotlib.ticker as mtick
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+
+pandas_profiling.ProfileReport(pd.read_excel(r'\Users\manan\Desktop\vrn trash\data science\project 1 -model to predict the house prices\Wiretel_Churn data.xlsx'))
+
+telco_base_data= pd.read_excel(r'\Users\manan\Desktop\vrn trash\data science\project 1 -model to predict the house prices\Wiretel_Churn data.xlsx')
+
+telco_base_data.head()
+
+### Checking attributes like shape, datatypes, value counts etc. to get better understanding of data.
+
+telco_base_data.shape
+
+telco_base_data.columns.values
+
+telco_base_data.dtypes
+
+telco_base_data.describe() #checking the descriptive statistics of numeric variables
+
+#custServ_calls 75% and max cals has more than 4x difference, mean aslo have more than 5x difference
+#intl_calls- 75% and max has more than 3x difference, mean have 4x difference
+
+#finding the exact value and percentage of churners
+
+telco_base_data['Churn'].value_counts()
+
+telco_base_data['Churn'].value_counts().plot(kind='barh', figsize=(8,6))
+plt.xlabel("Count", labelpad=14)
+plt.ylabel("Target Varisble", labelpad=14)
+plt.title("Count of Target Variable per category", y=1.02);
+
+100*telco_base_data['Churn'].value_counts()/len(telco_base_data['Churn'])
+
+#the dataset is highly imbalance, ratio= 85.5:14.5
+#we analyse the data with other features while taking the target values seperately to get some insights.
+
+#now balance the data either by upsampling or downsampling 
+
+# Concise Summary of the dataframe, as we have too many columns, we are using thr verbose=True mode
+telco_base_data.info(verbose = True)
+
+missing = pd.DataFrame((telco_base_data.isnull().sum())*100/telco_base_data.shape[0]).reset_index()
+plt.figure(figsize=(16,5))
+ax=sns.pointplot('index',0,data=missing)
+plt.xticks(rotation = 90, fontsize = 7)
+plt.title("Percentage of Missing value")
+plt.ylabel("PERCENTAGE")
+plt.show()
+#for finding the percentage of missing value
+
+#here we don't have missing values
+
+for column in telco_base_data:
+    if telco_base_data[column].dtype=='object':
+        print(f'{column} : {telco_base_data[column].unique()}')
+
+#state- convert into dummy variables
+#phone- drop as it is a unique-id
+#Intl_Plan, Vmail_Plan, Churn - convert into boolean
+
+## Data cleaning
+
+### 1- Create a copy of base data for manupulation and processing
+
+telco_data = telco_base_data.copy()
+
+### 2- Charges should be numeric amount. Let's convert it to numerical data type
+
+telco_data.info()
+
+
+
+telco_data['Intl_Plan'] = telco_data['Intl_Plan'].apply(lambda x: 1 if x == 'yes' else 0)
+telco_data['Vmail_Plan'] = telco_data['Vmail_Plan'].apply(lambda x: 1 if x == 'yes' else 0)
+telco_data.drop(columns=['Phone'], axis=1, inplace=True)
+telco_data.head(10)
+
+telco_data.info()
+
+tel_viz=telco_data.copy()
+
+## Creating bins for better visualisation
+
+### Day Charge group
+
+#Divide the customer into bins 
+# get the max Account_Length
+print(tel_viz['Day_Charge'].max())
+
+# Group the Day_Charge in bins of 10
+labels = ["{0} - {1}".format(i, i + 9) for i in range(1,61,10)]
+
+tel_viz['Day_Charge_group'] = pd.cut(tel_viz.Day_Charge, range(1,70,10), right=False, labels=labels)
+
+tel_viz['Day_Charge_group'].value_counts()
+
+### Evening Charge Group
+
+#Divide the customer into bins 
+# get the max Eve_Charge
+print(tel_viz['Eve_Charge'].max())
+
+# Group the Eve_Charge in bins of 24
+labels = ["{0} - {1}".format(i, i + 4) for i in range(1,36,5)]
+
+tel_viz['Eve_Charge_group'] = pd.cut(tel_viz.Eve_Charge, range(1,40,5), right=False, labels=labels)
+tel_viz['Eve_Charge_group'].value_counts()
+
+### Night Charge Group
+
+#Divide the customer into bins 
+# get the max Night_Charge
+print(tel_viz['Night_Charge'].max())
+
+# Group the Night_Charge in bins of 4
+labels = ["{0} - {1}".format(i, i + 2) for i in range(1,19,3)]
+
+tel_viz['Night_Charge_group'] = pd.cut(tel_viz.Night_Charge, range(1,21,3), right=False, labels=labels)
+tel_viz['Night_Charge_group'].value_counts()
+
+### Intl_Charge group
+
+#Divide the customer into bins based on tenure
+# get the max Intl_Charge
+print(tel_viz['Intl_Charge'].max())
+
+# Group the Intl_Charge in bins of 0.5
+labels = ["{0} - {1}".format(i, i + 1) for i in range(1,7,2)]
+
+tel_viz['Intl_Charge_group'] = pd.cut(tel_viz.Intl_Charge, range(1,8,2), right=False, labels=labels)
+tel_viz['Intl_Charge_group'].value_counts()
+
+### Account length group 
+
+#Divide the customer into bins 
+# get the max Account_Length
+print(tel_viz['Account_Length'].max())
+
+# Group the Account_Length in bins of 24
+labels = ["{0} - {1}".format(i, i + 23) for i in range(1,221,24)]
+
+tel_viz['Account_Length_group'] = pd.cut(tel_viz.Account_Length, range(1,245,24), right=False, labels=labels)
+
+
+
+tel_viz['Account_Length_group'].value_counts()
+
+#drop column Day_Charge,Eve_Charge,Night_Charge,Intl_Charge and Account_Length
+tel_viz.drop(columns=['Account_Length','Day_Charge','Eve_Charge','Night_Charge','Intl_Charge'], axis=1, inplace=True)
+tel_viz.head()
+
+# Data Exploration
+
+### plot distibution of individual predictor by churn 
+
+## Univariate Analysis
+
+for i,predictor in enumerate(tel_viz.drop(columns=['Churn'])):
+    plt.figure(i)
+    sns.countplot(data=tel_viz, x=predictor, hue='Churn')
+
+# Though the number is less but people having international plan are more likely to churn.
+# people who call the customer service more than 4 times are more likely to be churn
+# people having day charges more than 50 are more likely to churn.
+
+#similarly we can create bins for different columns which have continous variables to get better visualisation
+
+###  Convert the target variable 'Churn' in a binary numeric variable i.e. True=1 ; False=0 
+
+
+telco_data['Churn'] = telco_data['Churn'].apply(lambda x: 1 if x == 'True.' else 0)
+telco_data.head(30)
+
+
+
+telco_data.hist(figsize=(15,8))
+
+telco_data.corr()
+
+plt.figure(figsize=(15,8))
+sns.heatmap(telco_data.corr(), annot=True, cmap="YlGnBu")
+
+corr_matrix= telco_data.corr()
+corr_matrix["Churn"].sort_values(ascending=False)
+
+### 3- Convert all the categorical variables into dummy variables (one hot encoding)
+
+telco_data.State.value_counts() 
+
+#creating dummy variables (one hot encoding)
+pd.get_dummies(telco_data['State']).head(10)
+
+telco_data.drop('State', axis=1).head()
+
+telco_data_dummies = pd.concat([telco_data.drop('State', axis=1),
+                              pd.get_dummies(telco_data['State'])],axis=1)
+telco_data_dummies
+
+telco_data_dummies.info()
+
+
+
+# CONCLUSION
+
+## 1- People who call the customer service more than 4 times are more likely to be churn.
+## 2- People having day charges more than 50 are more likely to churn. 
+## 3- Though the number is less but people having international plan are more likely to churn.
+
+telco_data_dummies.to_csv('tel_churn.csv') #saving the model
+
+# Model Selection
+
+import pandas as pd
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import recall_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.tree import DecisionTreeClassifier
+from imblearn.combine import SMOTEENN
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+df= pd.read_csv('tel_churn.csv')
+
+df.head()
+
+df = df.drop('Unnamed: 0', axis=1)
+
+df.head()
+
+#Creating X and Y variables
+x = df.drop('Churn', axis=1)
+x
+
+y= df['Churn']
+y
+
+y.value_counts().plot(kind='barh', figsize=(8,6))
+plt.xlabel("Count", labelpad=14)
+plt.ylabel("Target Varisble", labelpad=14)
+plt.title("Count of Target Variable per category", y=1.02);
+
+100*y.value_counts()/len(y) #percentage of customer churn
+
+#spliting data into train and test sets in ratio 70:30
+x_train, x_test, y_train, y_test = train_test_split(x,y, test_size=0.3, random_state=100)
+
+# Decision Tree Classifier
+
+model_dt = DecisionTreeClassifier(criterion='entropy', random_state=100, max_depth=6, min_samples_leaf=8)
+
+model_dt.fit(x_train,y_train)
+
+y_pred = model_dt.predict(x_test)
+
+y_pred
+
+acc_dt = round(metrics.accuracy_score(y_test,y_pred)*100,2)
+acc_dt
+
+print(classification_report(y_test, y_pred, labels=[1,0]))
+
+#getting low/high precision and recall for minority call 1
+
+print(confusion_matrix(y_test, y_pred))      #confusion matrix for Decision tree
+
+
+
+
+
+## Apply SMOTE + ENN
+
+sm = SMOTEENN()
+x_resampled, y_resampled = sm.fit_resample(x, y)
+
+xr_train, xr_test, yr_train, yr_test = train_test_split(x_resampled, y_resampled, test_size=0.2)
+
+model_dt_smote = DecisionTreeClassifier(criterion='gini', random_state=100, max_depth=6, min_samples_leaf=8)
+model_dt_smote.fit(xr_train, yr_train)
+
+y_pred_smote = model_dt_smote.predict(xr_test)
+
+
+acc_dt_sm = round(metrics.accuracy_score(yr_test,y_pred_smote)*100,2)
+acc_dt_sm
+
+print(classification_report(yr_test, y_pred_smote, labels=[0,1]))
+
+print(confusion_matrix(yr_test, y_pred_smote))    #confusion matrix for decision tree after smote
+
+
+
+# Random Forest Classifier 
+
+from sklearn.ensemble import RandomForestClassifier
+
+model_rf = RandomForestClassifier(n_estimators=100, criterion='gini', random_state=100, max_depth=6, min_samples_leaf=8)
+model_rf.fit(x_train,y_train)
+y_pred = model_rf.predict(x_test)
+y_pred
+
+acc_rf = round(metrics.accuracy_score(y_test,y_pred)*100,2)
+acc_rf
+
+print(classification_report(y_test, y_pred, labels=[1,0]))
+
+print(confusion_matrix(y_test, y_pred))   # confusion matrix for Random Forest
+
+## Apply SMOTE + ENN
+
+
+sm = SMOTEENN()
+x_resampled, y_resampled = sm.fit_resample(x, y)
+
+xr_train, xr_test, yr_train, yr_test = train_test_split(x_resampled, y_resampled, test_size=0.2)
+
+model_smote_rf = RandomForestClassifier(n_estimators=100, criterion='gini', random_state=100, max_depth=6, min_samples_leaf=8)
+model_smote_rf.fit(xr_train, yr_train)
+
+y_pred_smote_rf = model_smote_rf.predict(xr_test)
+
+
+acc_rf_sm = round(metrics.accuracy_score(yr_test,y_pred_smote_rf)*100,2)
+acc_rf_sm
+
+print(classification_report(yr_test, y_pred_smote_rf, labels=[0,1]))
+
+print(confusion_matrix(yr_test, y_pred_smote_rf))   # confusion matrix for Random Forest after smote
+
+# Logistic Regression 
+
+from sklearn.linear_model import LogisticRegression
+
+model_lr = LogisticRegression(random_state=50)
+model_lr.fit(x_train,y_train)
+y_pred = model_lr.predict(x_test)
+y_pred
+
+acc_lr = round(metrics.accuracy_score(y_test,y_pred)*100,2)
+acc_lr
+
+print(classification_report(y_test, y_pred, labels=[1,0]))
+
+print(confusion_matrix(y_test, y_pred))   # confusion matrix for Random Forest
+
+## Apply SMOTE + ENN
+
+
+sm = SMOTEENN()
+x_resampled, y_resampled = sm.fit_resample(x, y)
+
+xr_train, xr_test, yr_train, yr_test = train_test_split(x_resampled, y_resampled, test_size=0.2)
+
+model_lr_sm = LogisticRegression(random_state=100)
+model_lr_sm.fit(xr_train, yr_train)
+
+y_pred_smote_lr = model_lr_sm.predict(xr_test)
+
+acc_lr_sm = round(metrics.accuracy_score(yr_test,y_pred_smote_lr)*100,2)
+acc_lr_sm
+
+print(classification_report(yr_test, y_pred_smote_lr, labels=[0,1]))
+
+print(confusion_matrix(yr_test, y_pred_smote_lr))   # confusion matrix for Random Forest after smote
+
+
+
+
+
+# K-Neighbors Classifier
+
+from sklearn.neighbors import KNeighborsClassifier
+
+model_knc = KNeighborsClassifier(n_neighbors=5, metric='minkowski', p=2) # p=2 represents Eucidean distance
+model_knc.fit(x_train,y_train)
+y_pred = model_knc.predict(x_test)
+y_pred
+
+acc_knc = round(metrics.accuracy_score(y_test,y_pred)*100,2)
+acc_knc
+
+print(classification_report(y_test, y_pred, labels=[1,0]))
+
+print(confusion_matrix(y_test, y_pred))   # confusion matrix for Random Forest
+
+## Apply SMOTE + ENN
+
+
+sm = SMOTEENN()
+x_resampled, y_resampled = sm.fit_resample(x, y)
+
+xr_train, xr_test, yr_train, yr_test = train_test_split(x_resampled, y_resampled, test_size=0.2)
+
+model_knc_sm = KNeighborsClassifier(n_neighbors=5, metric='minkowski', p=2)
+model_knc_sm.fit(xr_train, yr_train)
+
+y_pred_smote_knc = model_knc_sm.predict(xr_test)
+
+acc_knc_sm = round(metrics.accuracy_score(yr_test,y_pred_smote_knc)*100,2)
+acc_knc_sm
+
+print(classification_report(yr_test, y_pred_smote_knc, labels=[0,1]))
+
+print(confusion_matrix(yr_test, y_pred_smote_knc))   # confusion matrix for Random Forest after smote
+
+
+
+# SVM - Support Vector Machine
+
+from sklearn.svm import SVC
+
+model_svm = SVC(kernel='linear', random_state=50, probability=True)
+model_svm.fit(x_train,y_train)
+y_pred = model_svm.predict(x_test)
+y_pred
+
+acc_svm = round(metrics.accuracy_score(y_test,y_pred)*100,2)
+acc_svm
+
+print(classification_report(y_test, y_pred, labels=[1,0]))
+
+print(confusion_matrix(y_test, y_pred))   # confusion matrix for Random Forest
+
+## Apply SMOTE + ENN
+
+
+sm = SMOTEENN()
+x_resampled, y_resampled = sm.fit_resample(x, y)
+
+xr_train, xr_test, yr_train, yr_test = train_test_split(x_resampled, y_resampled, test_size=0.2)
+
+model_svm_sm = SVC(kernel='linear', random_state=50, probability=True)
+model_svm_sm.fit(xr_train, yr_train)
+
+y_pred_smote_svm = model_svm_sm.predict(xr_test)
+
+acc_svm_sm = round(metrics.accuracy_score(yr_test,y_pred_smote_svm)*100,2)
+acc_svm_sm
+
+print(classification_report(yr_test, y_pred_smote_svm, labels=[0,1]))
+
+print(confusion_matrix(yr_test, y_pred_smote_svm))   # confusion matrix for Random Forest after smote
+
+## Compare Sevral Models according to their Accuracies
+
+model_comparison = pd.DataFrame({'Model' : ['Decision Tree','Decision Tree smote',
+                                            'Random Forest','Random Forest smote',
+                                            'Logistic Regression','Logistic Regression smote',
+                                            'K-Nearest Neighbor','K-Nearest Neighbor smote',
+                                            'Support Vector Machine','Support Vector Machine smote'
+                                            ],
+                                'Score' : [acc_dt, acc_dt_sm,
+                                          acc_rf, acc_rf_sm,
+                                          acc_lr, acc_lr_sm,
+                                          acc_knc, acc_knc_sm,
+                                          acc_svm, acc_svm_sm]})
+model_comparison_df = model_comparison.sort_values(by='Score', ascending=False)
+model_comparison_df = model_comparison_df.set_index('Score')
+model_comparison_df.reset_index()
+
+
+
+# Saving the Model
+
+import pickle
+
+filename = 'model-2 (Churn).sav'
+
+pickle.dump(model_smote_rf, open(filename, 'wb'))
+
+load_model = pickle.load(open(filename, 'rb'))
+
+load_model.score(xr_test, yr_test)
